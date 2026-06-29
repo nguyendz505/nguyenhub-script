@@ -1,60 +1,21 @@
--- NguyenHub Hacker Terminal - ESP Unchanged
-local Players = game:GetService("Players")
-local Workspace = game:GetService("Workspace")
-local LocalPlayer = Players.LocalPlayer
+-- Lethal Ape Universal ESP (Fixed)
 local ESP = { Enabled = true, Highlights = {} }
+local Workspace = game:GetService("Workspace")
+local Players = game:GetService("Players")
 
--- --- UI TERMINAL HACKER ---
-local ScreenGui = Instance.new("ScreenGui", LocalPlayer:WaitForChild("PlayerGui"))
-local Frame = Instance.new("Frame", ScreenGui)
-Frame.Size = UDim2.new(0, 350, 0, 450)
-Frame.Position = UDim2.new(0.5, -175, 0.5, -225)
-Frame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-Frame.BorderColor3 = Color3.fromRGB(0, 255, 0)
-Frame.BorderSizePixel = 3
-Frame.Visible = true
-
-local Title = Instance.new("TextLabel", Frame)
-Title.Size = UDim2.new(1, 0, 0, 30)
-Title.Text = "> NGUYENHUB_TERMINAL_V1.0"
-Title.TextColor3 = Color3.fromRGB(0, 255, 0)
-Title.Font = Enum.Font.Code
-Title.BackgroundTransparency = 1
-
-local LogBox = Instance.new("ScrollingFrame", Frame)
-LogBox.Size = UDim2.new(0.95, 0, 0.85, 0)
-LogBox.Position = UDim2.new(0.02, 0, 0.1, 0)
-LogBox.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-LogBox.ScrollBarThickness = 2
-LogBox.BorderSizePixel = 0
-
-local function addLog(text)
-    local msg = Instance.new("TextLabel", LogBox)
-    msg.Size = UDim2.new(1, 0, 0, 25)
-    msg.Text = "> " .. text
-    msg.TextColor3 = Color3.fromRGB(0, 255, 0)
-    msg.Font = Enum.Font.Code
-    msg.TextSize = 14
-    msg.BackgroundTransparency = 1
-    msg.TextXAlignment = Enum.TextXAlignment.Left
-    LogBox.CanvasPosition = Vector2.new(0, LogBox.AbsoluteCanvasSize.Y)
-end
-
-addLog("INITIALIZING SYSTEM...")
-addLog("WAITING FOR COMMANDS...")
-
-LocalPlayer.Chatted:Connect(function(msg)
-    if msg:lower() == "/panel" then
-        Frame.Visible = not Frame.Visible
-    end
-end)
-
--- --- ESP LOGIC (GIỮ NGUYÊN 100%) ---
-local Colors = { Vang = Color3.fromRGB(255, 215, 0), Dong = Color3.fromRGB(184, 115, 51), KimCuong = Color3.fromRGB(0, 255, 255), LucBao = Color3.fromRGB(0, 255, 0), Monster = Color3.fromRGB(255, 50, 50) }
+local Colors = {
+    Vang = Color3.fromRGB(255, 215, 0),
+    Dong = Color3.fromRGB(184, 115, 51),
+    KimCuong = Color3.fromRGB(0, 255, 255),
+    LucBao = Color3.fromRGB(0, 255, 0),
+    Monster = Color3.fromRGB(255, 50, 50)
+}
 
 local function isValid(obj)
+    -- Kiểm tra object có tồn tại và không phải là người chơi
     if not obj or not obj:IsDescendantOf(Workspace) then return false end
     if obj:IsA("Model") and Players:FindFirstChild(obj.Name) then return false end
+    -- Bỏ qua các vật phẩm tàng hình hoặc không nhìn thấy
     if obj:IsA("BasePart") and obj.Transparency >= 1 then return false end
     return true
 end
@@ -68,10 +29,14 @@ local function cleanHighlight(obj)
 end
 
 local function createHighlight(obj, color, name)
+    -- Xóa highlight cũ nếu có để tránh trùng lặp
+    cleanHighlight(obj)
+    
     local h = Instance.new("Highlight", obj)
     h.FillColor = color
     h.OutlineColor = color
     h.FillTransparency = 0.5
+    
     local b = nil
     if name then
         b = Instance.new("BillboardGui", obj)
@@ -88,38 +53,36 @@ local function createHighlight(obj, color, name)
     ESP.Highlights[obj] = {H = h, B = b}
 end
 
--- --- MONITOR DIE ---
-local function monitorPlayer(player)
-    player.CharacterAdded:Connect(function(char)
-        char:WaitForChild("Humanoid").Died:Connect(function()
-            addLog("TARGET_DOWN: " .. player.Name)
-        end)
-    end)
-end
-
-for _, p in pairs(Players:GetPlayers()) do monitorPlayer(p) end
-Players.PlayerAdded:Connect(monitorPlayer)
-
 task.spawn(function()
     while true do
         if ESP.Enabled then
-            for obj in pairs(ESP.Highlights) do if not isValid(obj) then cleanHighlight(obj) end end
+            -- Dọn dẹp các highlight của vật phẩm không còn tồn tại
+            for obj in pairs(ESP.Highlights) do
+                if not obj or not obj.Parent then cleanHighlight(obj) end
+            end
+            
+            -- Quét vật phẩm và mob
             for _, obj in ipairs(Workspace:GetDescendants()) do
-                if not ESP.Highlights[obj] then
+                if (obj:IsA("BasePart") or obj:IsA("MeshPart") or obj:IsA("Model")) and not ESP.Highlights[obj] then
+                    -- Check Mob
                     if obj:IsA("Model") and obj:FindFirstChild("Humanoid") and not Players:FindFirstChild(obj.Name) then
                         createHighlight(obj, Colors.Monster, nil)
-                    elseif (obj:IsA("BasePart") or obj:IsA("MeshPart")) and isValid(obj) then
+                    -- Check Vật phẩm (Item)
+                    elseif isValid(obj) then
                         local n = obj.Name:lower()
-                        local c, nm = nil, nil
-                        if n:find("gold") or n:find("vang") then c, nm = Colors.Vang, "VÀNG"
-                        elseif n:find("copper") or n:find("dong") then c, nm = Colors.Dong, "ĐỒNG"
-                        elseif n:find("diamond") or n:find("kim") then c, nm = Colors.KimCuong, "KIM CƯƠNG"
-                        elseif n:find("emerald") or n:find("luc") then c, nm = Colors.LucBao, "LỤC BẢO" end
-                        if c then createHighlight(obj, c, nm) end
+                        local color, name = nil, nil
+                        if n:find("gold") or n:find("vang") then color, name = Colors.Vang, "VÀNG"
+                        elseif n:find("copper") or n:find("dong") then color, name = Colors.Dong, "ĐỒNG"
+                        elseif n:find("diamond") or n:find("kim") then color, name = Colors.KimCuong, "KIM CƯƠNG"
+                        elseif n:find("emerald") or n:find("luc") then color, name = Colors.LucBao, "LỤC BẢO" end
+                        
+                        if color then createHighlight(obj, color, name) end
                     end
                 end
             end
+        else
+            for obj in pairs(ESP.Highlights) do cleanHighlight(obj) end
         end
-        task.wait(2)
+        task.wait(1) -- Giảm thời gian chờ xuống 1s để quét nhanh hơn
     end
 end)
