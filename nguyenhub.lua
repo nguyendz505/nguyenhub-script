@@ -1,4 +1,4 @@
--- Lethal Ape ESP - Only Highlight + Remove Game Text
+-- Lethal Ape ESP - Only Highlight + XÓA HẾT CHỮ GAME
 local ESP = {
     Enabled = true,
     Highlights = {}
@@ -6,6 +6,7 @@ local ESP = {
 
 local Workspace = game:GetService("Workspace")
 local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
 
 local Colors = {
     Vang      = Color3.fromRGB(255, 215, 0),
@@ -29,40 +30,37 @@ local function createHighlight(obj, color)
     local h = Instance.new("Highlight")
     h.FillColor = color
     h.OutlineColor = color
-    h.FillTransparency = 0.4
-    h.OutlineTransparency = 0
+    h.FillTransparency = 0.35
+    h.OutlineTransparency = 0.1
     h.Parent = obj
 
     ESP.Highlights[obj] = {H = h}
 
-    -- Xóa highlight khi item mất
     obj.Destroying:Connect(function()
         cleanHighlight(obj)
     end)
 end
 
--- 🔥 Tự động xóa chữ của game (VÀNG, ĐỒNG, MONSTER...)
-local function removeGameText(obj)
-    for _, v in ipairs(obj:GetDescendants()) do
-        if v:IsA("BillboardGui") or v:IsA("SurfaceGui") then
-            if v:FindFirstChild("TextLabel") or v.Name:find("Name") or v.Name:find("Label") then
-                v:Destroy()
+-- 🔥 XÓA CHỮ GAME MẠNH HƠN
+local function removeAllGameText()
+    for _, obj in ipairs(Workspace:GetDescendants()) do
+        if obj:IsA("BillboardGui") or obj:IsA("SurfaceGui") then
+            local text = obj:FindFirstChildWhichIsA("TextLabel")
+            if text and (text.Text:find("VÀNG") or text.Text:find("ĐỒNG") or text.Text:find("KIM") or text.Text:find("LỤC") or text.Text:find("MONSTER")) then
+                obj:Destroy()
             end
         end
     end
 end
 
--- Main Loop
+-- Main ESP
 task.spawn(function()
     while true do
         if ESP.Enabled then
+            removeAllGameText()   -- Xóa chữ liên tục
+
             for _, obj in ipairs(Workspace:GetDescendants()) do
                 if not ESP.Highlights[obj] then
-                    
-                    -- Xóa chữ game trước
-                    removeGameText(obj)
-                    
-                    -- Tạo Highlight
                     if obj:IsA("Model") and obj:FindFirstChild("Humanoid") and not Players:FindFirstChild(obj.Name) then
                         createHighlight(obj, Colors.Monster)
                         
@@ -82,13 +80,12 @@ task.spawn(function()
                     end
                 end
             end
-        else
-            for obj in pairs(ESP.Highlights) do
-                cleanHighlight(obj)
-            end
         end
-        task.wait(1)
+        task.wait(0.8)
     end
 end)
 
-print("✅ ESP Loaded - Only Highlight + Game Text Removed")
+-- Xóa chữ mỗi frame (rất mạnh)
+RunService.Heartbeat:Connect(removeAllGameText)
+
+print("✅ ESP Loaded - ĐÃ XÓA HẾT CHỮ GAME")
