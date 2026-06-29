@@ -1,4 +1,4 @@
--- Lethal Ape ESP - Chữ Nhỏ + Fix Hiện Chữ
+-- Lethal Ape ESP - Fix Highlight Biến Mất Ngay Khi Nhặt
 local ESP = {
     Enabled = true,
     Highlights = {}
@@ -19,15 +19,13 @@ local function cleanHighlight(obj)
     local data = ESP.Highlights[obj]
     if data then
         if data.H then data.H:Destroy() end
-        if data.B then data.B:Destroy() end
         ESP.Highlights[obj] = nil
     end
 end
 
-local function createHighlight(obj, color, name)
+local function createHighlight(obj, color)
     if ESP.Highlights[obj] then return end
 
-    -- Highlight
     local h = Instance.new("Highlight")
     h.FillColor = color
     h.OutlineColor = color
@@ -35,69 +33,68 @@ local function createHighlight(obj, color, name)
     h.OutlineTransparency = 0
     h.Parent = obj
 
-    -- Chữ nhỏ
-    local b = Instance.new("BillboardGui")
-    b.Size = UDim2.new(0, 90, 0, 35)
-    b.StudsOffset = Vector3.new(0, 3, 0)
-    b.AlwaysOnTop = true
-    b.Parent = obj
+    ESP.Highlights[obj] = {H = h}
 
-    local t = Instance.new("TextLabel")
-    t.Size = UDim2.new(1,0,1,0)
-    t.BackgroundTransparency = 1
-    t.Text = name
-    t.TextColor3 = color
-    t.TextStrokeTransparency = 0
-    t.TextStrokeColor3 = Color3.new(0,0,0)
-    t.Font = Enum.Font.GothamBold
-    t.TextScaled = true
-    t.TextSize = 16
-    t.Parent = b
-
-    ESP.Highlights[obj] = {H = h, B = b}
-
-    obj.Destroying:Connect(function()
+    -- 🔥 Fix chính: Xóa highlight NGAY KHI item bị nhặt/destroy
+    local connection
+    connection = obj.Destroying:Connect(function()
         cleanHighlight(obj)
+        if connection then connection:Disconnect() end
+    end)
+    
+    -- Backup nếu Destroying không trigger (một số item bị remove khác)
+    local ancestryConn
+    ancestryConn = obj.AncestryChanged:Connect(function()
+        if not obj:IsDescendantOf(Workspace) then
+            cleanHighlight(obj)
+            if ancestryConn then ancestryConn:Disconnect() end
+        end
     end)
 end
 
--- Main Loop (tăng tốc độ quét)
+-- Main Loop
 task.spawn(function()
     while true do
         if ESP.Enabled then
+            -- Clean invalid highlights
+            for obj in pairs(ESP.Highlights) do
+                if not obj or not obj.Parent or not isValid(obj) then
+                    cleanHighlight(obj)
+                end
+            end
+
             for _, obj in ipairs(Workspace:GetDescendants()) do
                 if not ESP.Highlights[obj] then
-                    
-                    -- Monster
                     if obj:IsA("Model") and obj:FindFirstChild("Humanoid") and not Players:FindFirstChild(obj.Name) then
-                        createHighlight(obj, Colors.Monster, "MONSTER")
-                    
-                    -- Items
-                    elseif (obj:IsA("BasePart") or obj:IsA("MeshPart") or obj:IsA("Model")) then
-                        local n = obj.Name:lower()
-                        local color, name = nil, nil
+                        createHighlight(obj, Colors.Monster)
                         
-                        if n:find("vang") or n:find("gold") then 
-                            color, name = Colors.Vang, "VÀNG"
-                        elseif n:find("dong") or n:find("copper") then 
-                            color, name = Colors.Dong, "ĐỒNG"
-                        elseif n:find("kim") or n:find("diamond") then 
-                            color, name = Colors.KimCuong, "KIM CƯƠNG"
-                        elseif n:find("luc") or n:find("emerald") then 
-                            color, name = Colors.LucBao, "LỤC BẢO"
+                    elseif (obj:IsA("BasePart") or obj:IsA("MeshPart")) then
+                        local n = obj.Name:lower()
+                        local color = nil
+                        
+                        if n:find("gold") or n:find("vang") then color = Colors.Vang
+                        elseif n:find("copper") or n:find("dong") then color = Colors.Dong
+                        elseif n:find("diamond") or n:find("kim") then color = Colors.KimCuong
+                        elseif n:find("emerald") or n:find("luc") then color = Colors.LucBao
                         end
                         
-                        if color and name then
-                            createHighlight(obj, color, name)
+                        if color then
+                            createHighlight(obj, color)
                         end
                     end
                 end
             end
         else
-            for obj in pairs(ESP.Highlights) do cleanHighlight(obj) end
+            for obj in pairs(ESP.Highlights) do
+                cleanHighlight(obj)
+            end
         end
-        task.wait(0.7)
+        task.wait(0.8)
     end
 end)
 
-print("✅ ESP Loaded - Chữ Nhỏ Đã Bật")
+local function isValid(obj)
+    return obj and obj.Parent and obj:IsDescendantOf(Workspace)
+end
+
+print("✅ ESP Loaded - Fix Highlight Biến Mất Ngay Khi Nhặt")
