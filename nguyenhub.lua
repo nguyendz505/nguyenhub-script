@@ -1,4 +1,4 @@
--- Lethal Ape ESP - Only Highlight + XÓA HẾT CHỮ GAME
+-- Lethal Ape ESP - Chữ Nhỏ + Fix Hiện Chữ
 local ESP = {
     Enabled = true,
     Highlights = {}
@@ -6,7 +6,6 @@ local ESP = {
 
 local Workspace = game:GetService("Workspace")
 local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
 
 local Colors = {
     Vang      = Color3.fromRGB(255, 215, 0),
@@ -18,74 +17,87 @@ local Colors = {
 
 local function cleanHighlight(obj)
     local data = ESP.Highlights[obj]
-    if data and data.H then
-        data.H:Destroy()
+    if data then
+        if data.H then data.H:Destroy() end
+        if data.B then data.B:Destroy() end
         ESP.Highlights[obj] = nil
     end
 end
 
-local function createHighlight(obj, color)
+local function createHighlight(obj, color, name)
     if ESP.Highlights[obj] then return end
 
+    -- Highlight
     local h = Instance.new("Highlight")
     h.FillColor = color
     h.OutlineColor = color
     h.FillTransparency = 0.35
-    h.OutlineTransparency = 0.1
+    h.OutlineTransparency = 0
     h.Parent = obj
 
-    ESP.Highlights[obj] = {H = h}
+    -- Chữ nhỏ
+    local b = Instance.new("BillboardGui")
+    b.Size = UDim2.new(0, 90, 0, 35)
+    b.StudsOffset = Vector3.new(0, 3, 0)
+    b.AlwaysOnTop = true
+    b.Parent = obj
+
+    local t = Instance.new("TextLabel")
+    t.Size = UDim2.new(1,0,1,0)
+    t.BackgroundTransparency = 1
+    t.Text = name
+    t.TextColor3 = color
+    t.TextStrokeTransparency = 0
+    t.TextStrokeColor3 = Color3.new(0,0,0)
+    t.Font = Enum.Font.GothamBold
+    t.TextScaled = true
+    t.TextSize = 16
+    t.Parent = b
+
+    ESP.Highlights[obj] = {H = h, B = b}
 
     obj.Destroying:Connect(function()
         cleanHighlight(obj)
     end)
 end
 
--- 🔥 XÓA CHỮ GAME MẠNH HƠN
-local function removeAllGameText()
-    for _, obj in ipairs(Workspace:GetDescendants()) do
-        if obj:IsA("BillboardGui") or obj:IsA("SurfaceGui") then
-            local text = obj:FindFirstChildWhichIsA("TextLabel")
-            if text and (text.Text:find("VÀNG") or text.Text:find("ĐỒNG") or text.Text:find("KIM") or text.Text:find("LỤC") or text.Text:find("MONSTER")) then
-                obj:Destroy()
-            end
-        end
-    end
-end
-
--- Main ESP
+-- Main Loop (tăng tốc độ quét)
 task.spawn(function()
     while true do
         if ESP.Enabled then
-            removeAllGameText()   -- Xóa chữ liên tục
-
             for _, obj in ipairs(Workspace:GetDescendants()) do
                 if not ESP.Highlights[obj] then
+                    
+                    -- Monster
                     if obj:IsA("Model") and obj:FindFirstChild("Humanoid") and not Players:FindFirstChild(obj.Name) then
-                        createHighlight(obj, Colors.Monster)
-                        
-                    elseif (obj:IsA("BasePart") or obj:IsA("MeshPart")) then
+                        createHighlight(obj, Colors.Monster, "MONSTER")
+                    
+                    -- Items
+                    elseif (obj:IsA("BasePart") or obj:IsA("MeshPart") or obj:IsA("Model")) then
                         local n = obj.Name:lower()
-                        local color = nil
+                        local color, name = nil, nil
                         
-                        if n:find("gold") or n:find("vang") then color = Colors.Vang
-                        elseif n:find("copper") or n:find("dong") then color = Colors.Dong
-                        elseif n:find("diamond") or n:find("kim") then color = Colors.KimCuong
-                        elseif n:find("emerald") or n:find("luc") then color = Colors.LucBao
+                        if n:find("vang") or n:find("gold") then 
+                            color, name = Colors.Vang, "VÀNG"
+                        elseif n:find("dong") or n:find("copper") then 
+                            color, name = Colors.Dong, "ĐỒNG"
+                        elseif n:find("kim") or n:find("diamond") then 
+                            color, name = Colors.KimCuong, "KIM CƯƠNG"
+                        elseif n:find("luc") or n:find("emerald") then 
+                            color, name = Colors.LucBao, "LỤC BẢO"
                         end
                         
-                        if color then
-                            createHighlight(obj, color)
+                        if color and name then
+                            createHighlight(obj, color, name)
                         end
                     end
                 end
             end
+        else
+            for obj in pairs(ESP.Highlights) do cleanHighlight(obj) end
         end
-        task.wait(0.8)
+        task.wait(0.7)
     end
 end)
 
--- Xóa chữ mỗi frame (rất mạnh)
-RunService.Heartbeat:Connect(removeAllGameText)
-
-print("✅ ESP Loaded - ĐÃ XÓA HẾT CHỮ GAME")
+print("✅ ESP Loaded - Chữ Nhỏ Đã Bật")
