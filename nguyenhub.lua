@@ -1,4 +1,4 @@
--- Lethal Ape Universal ESP (Fixed)
+-- Lethal Ape Universal ESP (PC & Mobile)
 local ESP = { Enabled = true, Highlights = {} }
 local Workspace = game:GetService("Workspace")
 local Players = game:GetService("Players")
@@ -12,10 +12,8 @@ local Colors = {
 }
 
 local function isValid(obj)
-    -- Kiểm tra object có tồn tại và không phải là người chơi
     if not obj or not obj:IsDescendantOf(Workspace) then return false end
     if obj:IsA("Model") and Players:FindFirstChild(obj.Name) then return false end
-    -- Bỏ qua các vật phẩm tàng hình hoặc không nhìn thấy
     if obj:IsA("BasePart") and obj.Transparency >= 1 then return false end
     return true
 end
@@ -29,9 +27,6 @@ local function cleanHighlight(obj)
 end
 
 local function createHighlight(obj, color, name)
-    -- Xóa highlight cũ nếu có để tránh trùng lặp
-    cleanHighlight(obj)
-    
     local h = Instance.new("Highlight", obj)
     h.FillColor = color
     h.OutlineColor = color
@@ -56,26 +51,20 @@ end
 task.spawn(function()
     while true do
         if ESP.Enabled then
-            -- Dọn dẹp các highlight của vật phẩm không còn tồn tại
             for obj in pairs(ESP.Highlights) do
-                if not obj or not obj.Parent then cleanHighlight(obj) end
+                if not isValid(obj) then cleanHighlight(obj) end
             end
-            
-            -- Quét vật phẩm và mob
             for _, obj in ipairs(Workspace:GetDescendants()) do
-                if (obj:IsA("BasePart") or obj:IsA("MeshPart") or obj:IsA("Model")) and not ESP.Highlights[obj] then
-                    -- Check Mob
+                if not ESP.Highlights[obj] then
                     if obj:IsA("Model") and obj:FindFirstChild("Humanoid") and not Players:FindFirstChild(obj.Name) then
                         createHighlight(obj, Colors.Monster, nil)
-                    -- Check Vật phẩm (Item)
-                    elseif isValid(obj) then
+                    elseif (obj:IsA("BasePart") or obj:IsA("MeshPart")) and isValid(obj) then
                         local n = obj.Name:lower()
                         local color, name = nil, nil
                         if n:find("gold") or n:find("vang") then color, name = Colors.Vang, "VÀNG"
                         elseif n:find("copper") or n:find("dong") then color, name = Colors.Dong, "ĐỒNG"
                         elseif n:find("diamond") or n:find("kim") then color, name = Colors.KimCuong, "KIM CƯƠNG"
                         elseif n:find("emerald") or n:find("luc") then color, name = Colors.LucBao, "LỤC BẢO" end
-                        
                         if color then createHighlight(obj, color, name) end
                     end
                 end
@@ -83,6 +72,6 @@ task.spawn(function()
         else
             for obj in pairs(ESP.Highlights) do cleanHighlight(obj) end
         end
-        task.wait(1) -- Giảm thời gian chờ xuống 1s để quét nhanh hơn
+        task.wait(2)
     end
 end)
